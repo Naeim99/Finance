@@ -102,26 +102,55 @@ def asset_input():
 
 def monthly_result():
     print("Your total monthly values are: ")
-    print("Book Value, Depreciation")
+    print("Year, Month, Book Value, Depreciation Amount")
     cursor.execute("Select Year, Month, Cast(BookValue as Char) as BookValue, Cast(Depr as Char) as Depr from startupfinancials.bookvalue group by year, month")
     monthly_value = cursor.fetchall()
     for m_v in monthly_value:
         print(m_v)
 
 
+def current_asset_view():
+    print("Your current assets in CapEx table are: ")
+    cursor.execute("select Name, Cast(Cost as Char) as Cost, Month, Year, Life from startupfinancials.capex;")
+    print("Name, Cost, Purchase Month, Purchase Year, Depreciation Period")
+    current_asset = cursor.fetchall()
+    for c_a in current_asset:
+        print(c_a)
 
-print("Here are your current assets: ")
-cursor.execute("select Name, Cast(Cost as Char) as Cost, Month, Year, Life from startupfinancials.capex;")
-print("Name, Cost, Purchase Month, Purchase Year, Depreciation Period")
-current_asset = cursor.fetchall()
-for c_a in current_asset:
-    print(c_a)
-new_input = input("Do you want to add a new asset to your list: ").lower()
-if new_input == "yes":
-    asset_input()
-    monthly_result()
+def new_asset_input():
+    new_input = input("Do you want to add new assets to your list: ").lower()
+    if new_input == "yes":
+        asset_input()
+        monthly_results_request = input("Thank you for adding your new assets. Would you like to see your monthly book values and depreciation amounts: ")
+        if monthly_results_request.lower() == 'yes':
+            monthly_result()
+            print("Thank you for your inputs!")
+        else:
+            print("Thank you for your inputs!")
+    else:
+        monthly_results_request = input("Would you like to see your monthly book values and depreciation amounts: ")
+        if monthly_results_request.lower() == 'yes':
+            monthly_result()
+            print("Thank you!")
+        else:
+            print("Thank you!")
+
+
+cursor.execute("Select count(*) from startupfinancials.capex")
+monthly_value = cursor.fetchone()
+a = monthly_value[0]
+if a == 0:
+    print("There isn't any asset in the CapEx table right now.")
+elif a == 1:
+    user_input_current = input("There is one asset in the CapEx table. Would you like to view the asset: ")
+    if user_input_current.lower() == "yes":
+        current_asset_view()
 else:
-    monthly_result()
+    user_input_current = input("There are " + str(a) + " assets in CapEx table. Would you like to view them: ")
+    if user_input_current.lower() == "yes":
+        current_asset_view()
+
+new_asset_input()
 
 cursor.close()
 db.close()
