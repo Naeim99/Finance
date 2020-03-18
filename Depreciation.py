@@ -1,6 +1,19 @@
 import mysql.connector
 import config
 
+# Create the database if it doesn't exist
+db = mysql.connector.connect(
+    host=config.host_finance,
+    user=config.user_finance,
+    passwd=config.password_finance,
+)
+cursor = db.cursor()
+cursor.execute("CREATE DATABASE IF NOT EXISTS startupfinancials")
+cursor.close()
+db.close()
+
+
+# Connect the the database and create the tables if they don't exist
 db = mysql.connector.connect(
     host=config.host_finance,
     user=config.user_finance,
@@ -10,11 +23,12 @@ db = mysql.connector.connect(
 
 cursor = db.cursor()
 
-cursor.execute("CREATE DATABASE IF NOT EXISTS startupfinancials")
 cursor.execute("CREATE TABLE IF NOT EXISTS CapEx (ID Int Primary Key, Name Varchar(50) Not Null, Category Varchar (20) Not Null, Cost Decimal(12,2) Not Null, Month Int Not Null, Year Int Not Null, Life Int Not Null)")
 cursor.execute("CREATE TABLE IF NOT EXISTS BookValue (ID Int Primary Key, AssetID Int Not Null, Name Varchar(50) Not Null, Month Int Not Null, Year Int Not Null, BookValue Decimal(12,2) Not Null,Depr Decimal(12,2) Not Null)")
 db.commit()
 
+
+# Convert monthly text values to number values for depreciation calculation
 month_conversions = {
     "jan" : "1",
     "feb" : "2",
@@ -41,7 +55,7 @@ month_conversions = {
     "december" : "12"
 }
 
-
+# Add the new assets to CapExt and BookValue tables
 def asset_input():
     cursor.execute("select count(ID) from startupfinancials.capex;")
     id_num = cursor.fetchone()[0] + 1
@@ -99,7 +113,7 @@ def asset_input():
         id_num = id_num + 1
         user_input = input("Do you have more assets to input (Yes/No): ")
 
-
+# Show monthly book values and depreciation expenses
 def monthly_result():
     print("Your total monthly values are: ")
     print("Year, Month, Book Value, Depreciation Amount")
@@ -108,7 +122,7 @@ def monthly_result():
     for m_v in monthly_value:
         print(m_v)
 
-
+# Show current asset list in CapEx table
 def current_asset_view():
     print("Your current assets in CapEx table are: ")
     cursor.execute("select Name, Cast(Cost as Char) as Cost, Month, Year, Life from startupfinancials.capex;")
@@ -117,6 +131,7 @@ def current_asset_view():
     for c_a in current_asset:
         print(c_a)
 
+# Ask the user if any new asset needs to be added to CapExt and BookValue tables
 def new_asset_input():
     new_input = input("Do you want to add new assets to your list: ").lower()
     if new_input == "yes":
@@ -130,15 +145,21 @@ def new_asset_input():
     else:
         monthly_results_request = input("Would you like to see your monthly book values and depreciation amounts: ")
         if monthly_results_request.lower() == 'yes':
-            monthly_result()
-            print("Thank you!")
+            cursor.execute("Select count(*) from startupfinancials.bookvalue")
+            monthly_list = cursor.fetchone()
+            b = monthly_list[0]
+            if b == 0:
+                print("There isn't any asset to view monthly book value and depreciation. \nThank You!")
+            else:
+                monthly_result()
+                print("Thank you!")
         else:
             print("Thank you!")
 
 
 cursor.execute("Select count(*) from startupfinancials.capex")
-monthly_value = cursor.fetchone()
-a = monthly_value[0]
+asset_list = cursor.fetchone()
+a = asset_list[0]
 if a == 0:
     print("There isn't any asset in the CapEx table right now.")
 elif a == 1:
