@@ -120,6 +120,14 @@ class WidgetGallery(QDialog):
                 depr_month = depr_month + 1
                 depr_id_num = depr_id_num + 1
 
+        gallery.close()
+        gallery.new_asset_entry()
+        gallery.current_asset_table()
+        gallery.__init__()
+        gallery.repaint()
+        gallery.update()
+        gallery.setGeometry(200, 200, 1500, 700)
+        gallery.show()
 
     def __init__(self, parent=None):
 
@@ -135,17 +143,12 @@ class WidgetGallery(QDialog):
                         "Please use the box below to add any\n"
                         "additional assets to your list.")
 
-        refresh_button = QPushButton("Refresh Tables")
-        refresh_button.setDefault(True)
-
-
         self.new_asset_entry()
         self.current_asset_table()
 
 
         summary = QVBoxLayout()
         summary.addWidget(line_1)
-        summary.addWidget(refresh_button)
         summary.addStretch(1)
 
 
@@ -203,7 +206,6 @@ class WidgetGallery(QDialog):
         self.topLeftGroupBox.setLayout(entries)
 
         add_new_asset_button.clicked.connect(WidgetGallery.asset_input)
-
 
     def current_asset_table(self):
         self.bottomLeftTabWidget = QTabWidget()
@@ -266,17 +268,12 @@ class WidgetGallery(QDialog):
             for column_number, data in enumerate(row_data):
                 expense_size.setItem(row_number, column_number, QTableWidgetItem(str(data)))
 
-
-
-
 if __name__ == '__main__':
     ex = QApplication(sys.argv)
     gallery = WidgetGallery()
-    gallery.setGeometry(200, 200, 1500, 400)
+    gallery.setGeometry(200, 200, 1500, 700)
     gallery.show()
     sys.exit(ex.exec_())
 
 cursor.close()
 db.close()
-
-
