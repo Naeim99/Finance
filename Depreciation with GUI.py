@@ -85,7 +85,13 @@ class WidgetGallery(QDialog):
         db.commit()
 
         cursor.execute("select count(ID) from startupfinancials.bookvalue;")
-        depr_id_num = cursor.fetchone()[0] + 1
+        depr_id_check = cursor.fetchone()[0]
+        if depr_id_check == 0:
+            depr_id_num = 1
+        else:
+            cursor.execute("select max(ID) from startupfinancials.capex;")
+            depr_id_num = cursor.fetchone()[0] + 1
+
         book_value = a_cost
         depr_month = int(a_month)
         depr_year = a_year
@@ -135,13 +141,22 @@ class WidgetGallery(QDialog):
 
         self.originalPalette = QApplication.palette()
 
-        line_1 = QLabel("The fixed asset tab on the right shows\n"
-                        "your current assets entered into the system.\n"
-                        "The monthly expense tab shows your depreciation\n"
-                        "expense and book value by each month based on\n"
-                        "your current asset listed.\n"
-                        "Please use the box below to add any\n"
-                        "additional assets to your list.")
+        line_1 = QLabel("Please use the table below to add\n"
+                        "new assets to your list.\n"
+                        "\n"
+                        "The tabs on the right display:\n"
+                        "\n"
+                        "1. Fixed Asset List - All the assets that\n"
+                        "have been entered into the application\n"
+                        "so far.\n"
+                        "\n"
+                        "2. Summary Monthly Depreciation - Total\n"
+                        "depreciation and book value by month\n"
+                        "\n"
+                        "3. Detailed Monthly Depreciation - Monthly\n"
+                        "depreciation and book value by each\n"
+                        "month")
+
 
         self.new_asset_entry()
         self.current_asset_table()
@@ -154,12 +169,12 @@ class WidgetGallery(QDialog):
 
         mainLayout = QGridLayout()
         mainLayout.addLayout(summary, 0, 0)
-        mainLayout.addWidget(self.topLeftGroupBox, 1,0)
-        mainLayout.addWidget(self.bottomLeftTabWidget, 0, 1, 5, 5)
+        mainLayout.addWidget(self.new_asset_box, 1,0)
+        mainLayout.addWidget(self.asset_table_box, 0, 1, 5, 5)
         self.setLayout(mainLayout)
 
     def new_asset_entry(self):
-        self.topLeftGroupBox = QGroupBox("New Assets")
+        self.new_asset_box = QGroupBox("New Assets")
         global month_options, year_options, life_options, asset_name, asset_cost, asset_category
 
         month_options = QComboBox()
@@ -203,14 +218,13 @@ class WidgetGallery(QDialog):
         entries.addWidget(cost_labol, 6, 0)
         entries.addWidget(asset_cost, 6, 1, 1, 5)
         entries.addWidget(add_new_asset_button, 7, 1, 1, 5)
-        self.topLeftGroupBox.setLayout(entries)
+        self.new_asset_box.setLayout(entries)
 
         add_new_asset_button.clicked.connect(WidgetGallery.asset_input)
 
     def current_asset_table(self):
-        self.bottomLeftTabWidget = QTabWidget()
-        self.bottomLeftTabWidget.setSizePolicy(QSizePolicy.Preferred,
-                QSizePolicy.Ignored)
+        self.asset_table_box = QTabWidget()
+        self.asset_table_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored)
 
         cursor.execute("select * from startupfinancials.capex;")
         current_asset = cursor.fetchall()
@@ -219,14 +233,14 @@ class WidgetGallery(QDialog):
 
         current_tab = QWidget()
         current_size = QTableWidget(current_row, 7)
-        current_size.setHorizontalHeaderLabels(["Asset #", "Asset Name","Category", "Purchase Cost", "Purchase Month", "Purchase Year", "Asset Life"])
-        current_size.setColumnWidth(0, 100)
+        current_size.setHorizontalHeaderLabels(["Asset\n#", "Asset Name","Asset Category", "Purchase\nCost", "Purchase\nMonth", "Purchase\nYear", "Asset\nLife"])
+        current_size.setColumnWidth(0, 60)
         current_size.setColumnWidth(1, 200)
         current_size.setColumnWidth(2, 200)
-        current_size.setColumnWidth(3, 150)
-        current_size.setColumnWidth(4, 150)
-        current_size.setColumnWidth(5, 150)
-        current_size.setColumnWidth(6, 150)
+        current_size.setColumnWidth(3, 100)
+        current_size.setColumnWidth(4, 80)
+        current_size.setColumnWidth(5, 80)
+        current_size.setColumnWidth(6, 70)
         current_size.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         current_table = QHBoxLayout()
@@ -235,21 +249,39 @@ class WidgetGallery(QDialog):
         current_tab.setLayout(current_table)
 
 
-        cursor.execute("select * from startupfinancials.bookvalue;")
+        cursor.execute("select Year, Month, format(sum(Depr),2), format(sum(BookValue),2) from startupfinancials.bookvalue  group by Year, Month order by Year, Month;")
+        current_sum_depr = cursor.fetchall()
+
+        depr_sum_row = (len(current_sum_depr))
+
+        expense_sum_tab = QWidget()
+        expense_sum_size = QTableWidget(depr_sum_row, 4)
+        expense_sum_size.setHorizontalHeaderLabels(["Year", "Month", "Monthly\nDepreciation", "Book\nValue"])
+        expense_sum_size.setColumnWidth(0, 70)
+        expense_sum_size.setColumnWidth(1, 70)
+        expense_sum_size.setColumnWidth(2, 120)
+        expense_sum_size.setColumnWidth(3, 120)
+        expense_sum_size.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
+        expense_sum_table = QHBoxLayout()
+        expense_sum_table.setContentsMargins(5, 5, 5, 5)
+        expense_sum_table.addWidget(expense_sum_size)
+        expense_sum_tab.setLayout(expense_sum_table)
+
+        cursor.execute("select AssetID, Name, Month, Year, format(BookValue,2), format(Depr,2) from startupfinancials.bookvalue;")
         current_depr = cursor.fetchall()
 
         depr_row = (len(current_depr))
 
         expense_tab = QWidget()
-        expense_size = QTableWidget(depr_row, 7)
-        expense_size.setHorizontalHeaderLabels(["Primary #", "Asset #", "Asset Name", "Month", "Year", "Book Value", "Depr Amount"])
+        expense_size = QTableWidget(depr_row, 6)
+        expense_size.setHorizontalHeaderLabels(["Asset #", "Asset Name", "Month", "Year", "Book\nValue", "Monthly\nDepreciation"])
         expense_size.setColumnWidth(0, 75)
-        expense_size.setColumnWidth(1, 75)
-        expense_size.setColumnWidth(2, 200)
+        expense_size.setColumnWidth(1, 200)
+        expense_size.setColumnWidth(2, 60)
         expense_size.setColumnWidth(3, 60)
-        expense_size.setColumnWidth(4, 60)
+        expense_size.setColumnWidth(4, 150)
         expense_size.setColumnWidth(5, 150)
-        expense_size.setColumnWidth(6, 150)
         expense_size.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         expense_table = QHBoxLayout()
@@ -257,12 +289,17 @@ class WidgetGallery(QDialog):
         expense_table.addWidget(expense_size)
         expense_tab.setLayout(expense_table)
 
-        self.bottomLeftTabWidget.addTab(current_tab, " Fixed Asset List")
-        self.bottomLeftTabWidget.addTab(expense_tab, " Monthly Expense")
+        self.asset_table_box.addTab(current_tab, " Fixed Asset List")
+        self.asset_table_box.addTab(expense_sum_tab, " Summary Monthly Depreciation")
+        self.asset_table_box.addTab(expense_tab, " Detailed Monthly Depreciation")
 
         for row_number, row_data in enumerate(current_asset):
             for column_number, data in enumerate(row_data):
                 current_size.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+        for row_number, row_data in enumerate(current_sum_depr):
+            for column_number, data in enumerate(row_data):
+                expense_sum_size.setItem(row_number, column_number, QTableWidgetItem(str(data)))
 
         for row_number, row_data in enumerate(current_depr):
             for column_number, data in enumerate(row_data):
