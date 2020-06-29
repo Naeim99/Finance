@@ -25,8 +25,8 @@ db = mysql.connector.connect(
 
 cursor = db.cursor()
 
-cursor.execute("CREATE TABLE IF NOT EXISTS CapEx (ID Int Primary Key, Name Varchar(50) Not Null, Category Varchar (20) Not Null, Cost Decimal(12,2) Not Null, Month Int Not Null, Year Int Not Null, Life Int Not Null)")
-cursor.execute("CREATE TABLE IF NOT EXISTS BookValue (ID Int Primary Key, AssetID Int Not Null, Name Varchar(50) Not Null, Month Int Not Null, Year Int Not Null, BookValue Decimal(12,2) Not Null,Depr Decimal(12,2) Not Null)")
+cursor.execute("CREATE TABLE IF NOT EXISTS CapEx (AssetID Int Primary Key, Name Varchar(50) Not Null, Category Varchar (20) Not Null, Cost Decimal(12,2) Not Null, Month Int Not Null, Year Int Not Null, Life Int Not Null)")
+cursor.execute("CREATE TABLE IF NOT EXISTS BookValue (DeprID Int Primary Key, AssetID Int Not Null, Month Int Not Null, Year Int Not Null, NetValue Decimal(12,2) Not Null, BookValue Decimal(12,2) Not Null, Depr Decimal(12,2) Not Null)")
 db.commit()
 
 
@@ -60,14 +60,33 @@ month_conversions = {
 
 class WidgetGallery(QDialog):
 
+    def refresh_table(self):
+        gallery.close()
+        gallery.empty_tables()
+        gallery.new_asset_entry()
+        gallery.current_asset_table()
+        gallery.__init__()
+        gallery.repaint()
+        gallery.update()
+        gallery.setGeometry(200, 200, 1500, 700)
+        gallery.show()
+
+
+    def empty_data():
+        cursor.execute("Delete from startupfinancials.capex;")
+        cursor.execute("Delete from startupfinancials.bookvalue;")
+        db.commit()
+        gallery.refresh_table()
+
+
     def asset_input():
 
-        cursor.execute("select count(ID) from startupfinancials.capex;")
+        cursor.execute("select count(AssetID) from startupfinancials.capex;")
         id_check = cursor.fetchone()[0]
         if id_check == 0:
             id_num = 1
         else:
-            cursor.execute("select max(ID) from startupfinancials.capex;")
+            cursor.execute("select max(AssetID) from startupfinancials.capex;")
             id_num = cursor.fetchone()[0] + 1
 
 
@@ -79,26 +98,27 @@ class WidgetGallery(QDialog):
         a_life = int(life_options.currentText()) * 12
 
 
-        sql = "insert into startupfinancials.capex (ID, Name, Category, Cost, Month, Year, Life) values (%s, %s, %s, %s, %s, %s, %s)"
+        sql = "insert into startupfinancials.capex (AssetID, Name, Category, Cost, Month, Year, Life) values (%s, %s, %s, %s, %s, %s, %s)"
         val = (id_num, a_name, a_cat, a_cost, a_month, a_year, a_life)
         cursor.execute(sql, val)
         db.commit()
 
-        cursor.execute("select count(ID) from startupfinancials.bookvalue;")
+        cursor.execute("select count(DeprID) from startupfinancials.bookvalue;")
         depr_id_check = cursor.fetchone()[0]
         if depr_id_check == 0:
             depr_id_num = 1
         else:
-            cursor.execute("select max(ID) from startupfinancials.capex;")
+            cursor.execute("select max(DeprID) from startupfinancials.bookvalue;")
             depr_id_num = cursor.fetchone()[0] + 1
 
         book_value = a_cost
+        net_value = a_cost
         depr_month = int(a_month)
         depr_year = a_year
         depr = a_cost / a_life
 
-        sql = "insert into startupfinancials.BookValue (ID, AssetID, Name, Month, Year, BookValue, Depr) values (%s, %s, %s, %s, %s, %s, %s)"
-        val = (depr_id_num, id_num, a_name, depr_month, depr_year, book_value, 0)
+        sql = "insert into startupfinancials.BookValue (DeprID, AssetID, Month, Year, NetValue, BookValue, Depr) values (%s, %s, %s, %s, %s, %s, %s)"
+        val = (depr_id_num, id_num, depr_month, depr_year, net_value, book_value, 0)
         cursor.execute(sql, val)
         db.commit()
         book_value = book_value - depr
@@ -109,8 +129,8 @@ class WidgetGallery(QDialog):
             if depr_month == 13:
                 depr_month = 1
                 depr_year = depr_year + 1
-                sql = "insert into startupfinancials.BookValue (ID, AssetID, Name, Month, Year, BookValue, Depr) values (%s, %s, %s, %s, %s, %s, %s)"
-                val = (depr_id_num, id_num, a_name, depr_month, depr_year, book_value, depr)
+                sql = "insert into startupfinancials.BookValue (DeprID, AssetID, Month, Year, NetValue, BookValue, Depr) values (%s, %s, %s, %s, %s, %s, %s)"
+                val = (depr_id_num, id_num, depr_month, depr_year, net_value, book_value, depr)
                 cursor.execute(sql, val)
                 db.commit()
                 book_value = book_value - depr
@@ -118,22 +138,16 @@ class WidgetGallery(QDialog):
                 depr_id_num = depr_id_num + 1
 
             else:
-                sql = "insert into startupfinancials.BookValue (ID, AssetID, Name, Month, Year, BookValue, Depr) values (%s, %s, %s, %s, %s, %s, %s)"
-                val = (depr_id_num, id_num, a_name, depr_month, depr_year, book_value, depr)
+                sql = "insert into startupfinancials.BookValue (DeprID, AssetID, Month, Year, NetValue, BookValue, Depr) values (%s, %s, %s, %s, %s, %s, %s)"
+                val = (depr_id_num, id_num, depr_month, depr_year, net_value, book_value, depr)
                 cursor.execute(sql, val)
                 db.commit()
                 book_value = book_value - depr
                 depr_month = depr_month + 1
                 depr_id_num = depr_id_num + 1
 
-        gallery.close()
-        gallery.new_asset_entry()
-        gallery.current_asset_table()
-        gallery.__init__()
-        gallery.repaint()
-        gallery.update()
-        gallery.setGeometry(200, 200, 1500, 700)
-        gallery.show()
+        gallery.refresh_table()
+
 
     def __init__(self, parent=None):
 
@@ -158,6 +172,7 @@ class WidgetGallery(QDialog):
                         "month")
 
 
+        self.empty_tables()
         self.new_asset_entry()
         self.current_asset_table()
 
@@ -169,7 +184,8 @@ class WidgetGallery(QDialog):
 
         mainLayout = QGridLayout()
         mainLayout.addLayout(summary, 0, 0)
-        mainLayout.addWidget(self.new_asset_box, 1,0)
+        mainLayout.addWidget(self.empty_table_box, 1, 0)
+        mainLayout.addWidget(self.new_asset_box, 2,0)
         mainLayout.addWidget(self.asset_table_box, 0, 1, 5, 5)
         self.setLayout(mainLayout)
 
@@ -222,6 +238,20 @@ class WidgetGallery(QDialog):
 
         add_new_asset_button.clicked.connect(WidgetGallery.asset_input)
 
+    def empty_tables(self):
+        self.empty_table_box = QGroupBox("Empty Tables")
+        global month_options, year_options, life_options, asset_name, asset_cost, asset_category
+
+        empty_table_button = QPushButton("Delete All Data")
+        empty_table_button.setDefault(True)
+
+
+        clear = QGridLayout()
+        clear.addWidget(empty_table_button, 0, 0)
+        self.empty_table_box.setLayout(clear)
+
+        empty_table_button.clicked.connect(WidgetGallery.empty_data)
+
     def current_asset_table(self):
         self.asset_table_box = QTabWidget()
         self.asset_table_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored)
@@ -236,7 +266,7 @@ class WidgetGallery(QDialog):
         current_size.setHorizontalHeaderLabels(["Asset\n#", "Asset Name","Asset Category", "Purchase\nCost", "Purchase\nMonth", "Purchase\nYear", "Asset\nLife"])
         current_size.setColumnWidth(0, 60)
         current_size.setColumnWidth(1, 200)
-        current_size.setColumnWidth(2, 200)
+        current_size.setColumnWidth(2, 200, )
         current_size.setColumnWidth(3, 100)
         current_size.setColumnWidth(4, 80)
         current_size.setColumnWidth(5, 80)
@@ -248,19 +278,19 @@ class WidgetGallery(QDialog):
         current_table.addWidget(current_size)
         current_tab.setLayout(current_table)
 
-
-        cursor.execute("select Year, Month, format(sum(Depr),2), format(sum(BookValue),2) from startupfinancials.bookvalue  group by Year, Month order by Year, Month;")
+        cursor.execute("select Year, Month, format(sum(NetValue),2), format(sum(BookValue),2), format(sum(Depr),2) from startupfinancials.bookvalue group by Year, Month order by Year, Month;")
         current_sum_depr = cursor.fetchall()
 
         depr_sum_row = (len(current_sum_depr))
 
         expense_sum_tab = QWidget()
-        expense_sum_size = QTableWidget(depr_sum_row, 4)
-        expense_sum_size.setHorizontalHeaderLabels(["Year", "Month", "Monthly\nDepreciation", "Book\nValue"])
+        expense_sum_size = QTableWidget(depr_sum_row, 5)
+        expense_sum_size.setHorizontalHeaderLabels(["Year", "Month", "Net\nValue", "Book\nValue", "Monthly\nDepreciation"])
         expense_sum_size.setColumnWidth(0, 70)
         expense_sum_size.setColumnWidth(1, 70)
         expense_sum_size.setColumnWidth(2, 120)
         expense_sum_size.setColumnWidth(3, 120)
+        expense_sum_size.setColumnWidth(4, 120)
         expense_sum_size.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         expense_sum_table = QHBoxLayout()
@@ -268,18 +298,41 @@ class WidgetGallery(QDialog):
         expense_sum_table.addWidget(expense_sum_size)
         expense_sum_tab.setLayout(expense_sum_table)
 
-        cursor.execute("select AssetID, Name, Month, Year, format(BookValue,2), format(Depr,2) from startupfinancials.bookvalue;")
+        cursor.execute("select startupfinancials.bookvalue.Year, startupfinancials.bookvalue.Month, startupfinancials.capex.Category, format(sum(startupfinancials.bookvalue.NetValue),2), format(sum(startupfinancials.bookvalue.BookValue),2), format(sum(startupfinancials.bookvalue.Depr),2) FROM startupfinancials.bookvalue INNER JOIN startupfinancials.capex On startupfinancials.bookvalue.AssetID = startupfinancials.capex.AssetID group by startupfinancials.bookvalue.Year, startupfinancials.bookvalue.Month, startupfinancials.capex.Category order by Category, Year, Month;")
+
+        category_sum_depr = cursor.fetchall()
+
+        category_sum_row = (len(category_sum_depr))
+
+        category_sum_tab = QWidget()
+        category_sum_size = QTableWidget(category_sum_row, 6)
+        category_sum_size.setHorizontalHeaderLabels(["Year", "Month", "Category", "Net\nValue", "Book\nValue", "Monthly\nDepreciation"])
+        category_sum_size.setColumnWidth(0, 70)
+        category_sum_size.setColumnWidth(1, 70)
+        category_sum_size.setColumnWidth(2, 200)
+        category_sum_size.setColumnWidth(3, 120)
+        category_sum_size.setColumnWidth(4, 120)
+        category_sum_size.setColumnWidth(5, 120)
+        category_sum_size.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
+        category_sum_table = QHBoxLayout()
+        category_sum_table.setContentsMargins(5, 5, 5, 5)
+        category_sum_table.addWidget(category_sum_size)
+        category_sum_tab.setLayout(category_sum_table)
+
+
+        cursor.execute("select AssetID, Month, Year, format(NetValue,2), format(BookValue,2), format(Depr,2) from startupfinancials.bookvalue;")
         current_depr = cursor.fetchall()
 
         depr_row = (len(current_depr))
 
         expense_tab = QWidget()
         expense_size = QTableWidget(depr_row, 6)
-        expense_size.setHorizontalHeaderLabels(["Asset #", "Asset Name", "Month", "Year", "Book\nValue", "Monthly\nDepreciation"])
+        expense_size.setHorizontalHeaderLabels(["Asset #", "Month", "Year", "Net\nValue", "Book\nValue", "Monthly\nDepreciation"])
         expense_size.setColumnWidth(0, 75)
-        expense_size.setColumnWidth(1, 200)
+        expense_size.setColumnWidth(1, 60)
         expense_size.setColumnWidth(2, 60)
-        expense_size.setColumnWidth(3, 60)
+        expense_size.setColumnWidth(3, 150)
         expense_size.setColumnWidth(4, 150)
         expense_size.setColumnWidth(5, 150)
         expense_size.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -290,7 +343,8 @@ class WidgetGallery(QDialog):
         expense_tab.setLayout(expense_table)
 
         self.asset_table_box.addTab(current_tab, " Fixed Asset List")
-        self.asset_table_box.addTab(expense_sum_tab, " Summary Monthly Depreciation")
+        self.asset_table_box.addTab(expense_sum_tab, " Total Monthly Depreciation")
+        self.asset_table_box.addTab(category_sum_tab, "Monthly Depreciation by Category")
         self.asset_table_box.addTab(expense_tab, " Detailed Monthly Depreciation")
 
         for row_number, row_data in enumerate(current_asset):
@@ -300,6 +354,10 @@ class WidgetGallery(QDialog):
         for row_number, row_data in enumerate(current_sum_depr):
             for column_number, data in enumerate(row_data):
                 expense_sum_size.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+
+        for row_number, row_data in enumerate(category_sum_depr):
+            for column_number, data in enumerate(row_data):
+                category_sum_size.setItem(row_number, column_number, QTableWidgetItem(str(data)))
 
         for row_number, row_data in enumerate(current_depr):
             for column_number, data in enumerate(row_data):
