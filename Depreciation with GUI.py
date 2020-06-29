@@ -68,13 +68,21 @@ class WidgetGallery(QDialog):
         gallery.__init__()
         gallery.repaint()
         gallery.update()
-        gallery.setGeometry(200, 200, 1500, 700)
+        gallery.setGeometry(100, 100, 1500, 900)
         gallery.show()
 
 
     def empty_data():
         cursor.execute("Delete from startupfinancials.capex;")
         cursor.execute("Delete from startupfinancials.bookvalue;")
+        db.commit()
+        gallery.refresh_table()
+
+    def remove_asset():
+        a_number = str(asset_number.text())
+
+        cursor.execute("delete from startupfinancials.capex where AssetID =" + str(a_number))
+        cursor.execute("delete from startupfinancials.bookvalue where AssetID =" + str(a_number))
         db.commit()
         gallery.refresh_table()
 
@@ -172,8 +180,9 @@ class WidgetGallery(QDialog):
                         "month")
 
 
-        self.empty_tables()
         self.new_asset_entry()
+        self.empty_tables()
+        self.remove_asset_table()
         self.current_asset_table()
 
 
@@ -184,8 +193,9 @@ class WidgetGallery(QDialog):
 
         mainLayout = QGridLayout()
         mainLayout.addLayout(summary, 0, 0)
-        mainLayout.addWidget(self.empty_table_box, 1, 0)
-        mainLayout.addWidget(self.new_asset_box, 2,0)
+        mainLayout.addWidget(self.new_asset_box, 1, 0)
+        mainLayout.addWidget(self.remove_asset_box, 2, 0)
+        mainLayout.addWidget(self.empty_table_box, 3, 0)
         mainLayout.addWidget(self.asset_table_box, 0, 1, 5, 5)
         self.setLayout(mainLayout)
 
@@ -240,7 +250,6 @@ class WidgetGallery(QDialog):
 
     def empty_tables(self):
         self.empty_table_box = QGroupBox("Empty Tables")
-        global month_options, year_options, life_options, asset_name, asset_cost, asset_category
 
         empty_table_button = QPushButton("Delete All Data")
         empty_table_button.setDefault(True)
@@ -251,6 +260,24 @@ class WidgetGallery(QDialog):
         self.empty_table_box.setLayout(clear)
 
         empty_table_button.clicked.connect(WidgetGallery.empty_data)
+
+    def remove_asset_table(self):
+        self.remove_asset_box = QGroupBox("Remove an Assets")
+        global asset_number
+
+        asset_number = QLineEdit()
+        asset_number_labol = QLabel("Asset Number: ")
+
+        delete_asset_button = QPushButton("Delete This Asset")
+        delete_asset_button.setDefault(True)
+
+        delete_item = QGridLayout()
+        delete_item.addWidget(asset_number_labol, 0, 0)
+        delete_item.addWidget(asset_number, 0, 1, 1, 5)
+        delete_item.addWidget(delete_asset_button, 1, 1, 1, 5)
+        self.remove_asset_box.setLayout(delete_item)
+
+        delete_asset_button.clicked.connect(WidgetGallery.remove_asset)
 
     def current_asset_table(self):
         self.asset_table_box = QTabWidget()
@@ -366,7 +393,7 @@ class WidgetGallery(QDialog):
 if __name__ == '__main__':
     ex = QApplication(sys.argv)
     gallery = WidgetGallery()
-    gallery.setGeometry(200, 200, 1500, 700)
+    gallery.setGeometry(100, 100, 1500, 900)
     gallery.show()
     sys.exit(ex.exec_())
 
